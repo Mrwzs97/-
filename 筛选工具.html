@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>中文相同文字筛选工具</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #textboxContainer {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .textbox-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .textbox-wrapper {
+            flex-grow: 1;
+        }
+        textarea {
+            width: 100%;
+            height: 120px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: vertical;
+        }
+        .remove-btn {
+            background-color: #f44336;
+        }
+        .remove-btn:hover {
+            background-color: #d32f2f;
+        }
+        .result {
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+        .common-text {
+            margin-bottom: 5px;
+            padding: 5px;
+            background-color: #fff;
+            border-left: 3px solid #4CAF50;
+        }
+        .stats {
+            margin-top: 10px;
+            font-style: italic;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>中文相同文字筛选工具</h1>
+    
+    <div class="controls">
+        <button id="addTextboxBtn">添加文本框</button>
+        <button id="compareBtn">对比文本</button>
+    </div>
+    
+    <div id="textboxContainer">
+        <div class="textbox-group">
+            <div class="textbox-wrapper">
+                <textarea placeholder="文本框 1 - 在此输入文本...">羊牛鸡蛇龙狗</textarea>
+            </div>
+            <button class="remove-btn" onclick="removeTextbox(this)">删除</button>
+        </div>
+        <div class="textbox-group">
+            <div class="textbox-wrapper">
+                <textarea placeholder="文本框 2 - 在此输入文本...">鸡牛兔虎鼠猪猴狗马</textarea>
+            </div>
+            <button class="remove-btn" onclick="removeTextbox(this)">删除</button>
+        </div>
+    </div>
+    
+    <div class="result">
+        <h3>共同文字：</h3>
+        <div id="resultArea"></div>
+        <div id="statsArea" class="stats"></div>
+    </div>
+
+    <script>
+        let textboxCount = 2;
+        
+        // 添加文本框
+        document.getElementById('addTextboxBtn').addEventListener('click', function() {
+            textboxCount++;
+            const container = document.getElementById('textboxContainer');
+            const newTextbox = document.createElement('div');
+            newTextbox.className = 'textbox-group';
+            newTextbox.innerHTML = `
+                <div class="textbox-wrapper">
+                    <textarea placeholder="文本框 ${textboxCount} - 在此输入文本..."></textarea>
+                </div>
+                <button class="remove-btn" onclick="removeTextbox(this)">删除</button>
+            `;
+            container.appendChild(newTextbox);
+        });
+        
+        // 删除文本框
+        function removeTextbox(button) {
+            const container = document.getElementById('textboxContainer');
+            if (container.children.length > 1) {
+                button.parentElement.remove();
+                // 重新编号文本框
+                const textboxes = container.querySelectorAll('.textbox-group');
+                textboxCount = textboxes.length;
+                textboxes.forEach((group, index) => {
+                    group.querySelector('textarea').placeholder = `文本框 ${index + 1} - 在此输入文本...`;
+                });
+            } else {
+                alert('至少需要保留一个文本框');
+            }
+        }
+        
+        // 对比文本
+        document.getElementById('compareBtn').addEventListener('click', function() {
+            const textareas = document.querySelectorAll('#textboxContainer textarea');
+            const resultArea = document.getElementById('resultArea');
+            const statsArea = document.getElementById('statsArea');
+            
+            // 清空结果区域
+            resultArea.innerHTML = '';
+            statsArea.innerHTML = '';
+            
+            // 收集所有文本框的内容
+            const texts = Array.from(textareas).map(ta => ta.value.trim());
+            
+            // 检查是否有空文本框
+            if (texts.some(text => text === '')) {
+                resultArea.innerHTML = '<p>请在所有文本框中输入内容</p>';
+                return;
+            }
+            
+            // 获取所有文本框的共同文字
+            const commonWords = findCommonChineseWords(texts);
+            
+            // 显示结果
+            if (commonWords.length === 0) {
+                resultArea.innerHTML = '<p>没有找到共同文字</p>';
+            } else {
+                commonWords.forEach(word => {
+                    const div = document.createElement('div');
+                    div.className = 'common-text';
+                    div.textContent = word;
+                    resultArea.appendChild(div);
+                });
+                
+                // 显示统计信息
+                statsArea.innerHTML = `共找到 ${commonWords.length} 个共同文字`;
+            }
+        });
+        
+        // 专门处理中文文本，按字符分割
+        function findCommonChineseWords(texts) {
+            // 分割每段文本为单个字符
+            const charSets = texts.map(text => {
+                const chars = Array.from(text).filter(c => c.trim() !== '');
+                return new Set(chars); // 使用Set去除每段文本自身的重复
+            });
+            
+            if (charSets.length === 0) return [];
+            
+            // 从第一组开始比较
+            let commonChars = Array.from(charSets[0]);
+            
+            // 与其他组取交集
+            for (let i = 1; i < charSets.length; i++) {
+                commonChars = commonChars.filter(char => charSets[i].has(char));
+            }
+            
+            return commonChars;
+        }
+        
+        // 页面加载时自动对比
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('compareBtn').click();
+        });
+    </script>
+</body>
+</html>
